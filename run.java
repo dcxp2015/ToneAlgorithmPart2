@@ -1,85 +1,67 @@
 import java.util.*;
-import java.io.*; 
- 
+import java.io.*;
+
 public class run{
-	
-	public static ArrayList<double[]> data = new ArrayList<double[]>();	
-	public static ArrayList<Double> magnitude = new ArrayList<Double>();
-	public static double previousMagnitude = 0.0;
-	public static double currentMagnitude = 0.0;
-	public static int steps = 0;
-	public static double runningThreshold = 0.0;
-	public static double threshold = 4;
+
+
 	public static ArrayList<Double> xList = new ArrayList<Double>();
 	public static ArrayList<Double> yList = new ArrayList<Double>();
-	public static ArrayList<Double> zList = new ArrayList<Double>();
-	
-    public static void main(String []args)throws FileNotFoundException{
-		double time = 0.0; 		//get the time
-		double x = 0.0;			//get x
-		double y = 0.0; 			//get y
-		double z = 0.0;
-		
-		double threshold = 0;	//set threshold
-		double currentPace = 0.0;
-		double previousPace = 0.0;
-		
-		readTextFile("data.txt", xList, yList);
-		for(int i = 0; i < xList.size(); i++){
-			
-			calculateMagnitude(xList.get(i), yList.get(i));
-			
-		}
+	public static ArrayList<Double> tList = new ArrayList<Double>();
+	public static ArrayList<Double> magn  = new ArrayList<Double>();
+	public static double currentMagnitude = 0;
+	public static double previousMagnitude = 0;
+	public static double currentPace = 0;
+	public static double previousPace = 0;
+	public static int steps = 0;
 
-		System.out.print(steps);
-		
-		//if the feature is run: do run function
-		//first collect data for 30 seconds
-		//then calculate the rate of steps
-		//delete array
-		//every 10 seconds calculate array
-		//if rate is significantly slower trigger sound
-		
+	public static void main(String []args)throws FileNotFoundException{
+		double time = 0;
+		readTextFile("data.txt");
+		double threshold = getThreshold();
+		for(int i = 0; i < xList.size(); i++){
+			detectSteps(xList.get(i), yList.get(i), i, threshold);
+		}
+		System.out.println(steps);
+
+
+
 		String type = "run";
 		if(type == "run"){
-			
-			calculateMagnitude(x,y);
 			if(time == 30.0){
 				currentPace = steps/time;
 				System.out.print("Current pace" + currentPace);
-				magnitude.clear();
-				data.clear();
+				magn.clear();
+
 				previousPace = steps/time;
 			}
 			if(time > 30 && (time%10 == 0)){
 				currentPace = steps/10;				
-				magnitude.clear();
-				data.clear();
+				magn.clear();
+
 				
-				if(Math.abs(currentPace - previousPace) > runningThreshold){
+				if(currentPace - previousPace < 0){
 					System.out.println("RUN FASTER");
-				}
-				
-				
-				
+				}		
 			}
 		}
-    }
+
+	}
 
 
-
-	public static void readTextFile(String txtfile, ArrayList<Double> xlist, ArrayList<Double> ylist)throws FileNotFoundException {
-		 FileInputStream fstream = new FileInputStream(txtfile);
+	public static void readTextFile(String txtfile)throws FileNotFoundException {
+		FileInputStream fstream = new FileInputStream(txtfile);
 	    DataInputStream in = new DataInputStream(fstream);
 	    BufferedReader br = new BufferedReader(new InputStreamReader(in));
 	    String data;
 		 try{
 		    while ((data = br.readLine()) != null)   {
-		      String[] tmp = data.split(",");    //Split space
-				System.out.println(tmp[0]);
-				xlist.add(Double.parseDouble(tmp[0]));
-				ylist.add(Double.parseDouble(tmp[1]));
+		      String[] tmp = data.split("\\t");    //Split space
+				//System.out.println(tmp[0]);
 
+				xList.add(Double.parseDouble(tmp[0]));
+				yList.add(Double.parseDouble(tmp[1]));
+				tList.add(Double.parseDouble(tmp[2]));
+				magn.add(Math.sqrt(Math.pow(Double.parseDouble(tmp[0]),2) + Math.pow(Double.parseDouble(tmp[1]),2)));
 		    }
 		 }
 		 catch (FileNotFoundException e) {
@@ -87,65 +69,44 @@ public class run{
 		}
 		catch(IOException e){			
 		}
+	}	
 
-	}
-	
-	
-	 
-	 public static void addData(double x, double y, double time){
-	 	data.add(new double[]{x,y,time});	
-		
-	 }
-	 
 
-	 
-	 
-	/*public static void run(double x, double y){
-	 
-	 //while its still running
-	 //keep adding data to the arraylist data
-	 //calculate magnitude to find the number of steps
-	 //at 30 secounds (t = 30) calculate the rate of steps
-	 //every 10 seconds after (calculate the rate) and compare to initial rate
-	 
-	 
-	 
-	 
-	 	ArrayList<Double> magnitude = new ArrayList<Double>();
-		double magn = calculateMagnitude(x, y);
-		magnitude.add(magn);
-		System.out.println(magn);
-		//getxy
-		//send to calculate magnitude
-		//get magnitude and add to magnitude
-	 
-	 
-	 };*/
-	 
-	 
-	 
-	 public static void calculateMagnitude(double x, double y){
-	 	double m = 0.0;
-		m = Math.sqrt((Math.pow(x,2) + Math.pow(y,2)));
-	 	magnitude.add(m);
-		
-		currentMagnitude = m;
-		if(Math.abs(currentMagnitude - previousMagnitude) < threshold){
-
-			steps++;		
+	public static ArrayList<Double> copy(ArrayList<Double> lst){
+		ArrayList<Double> copy = new ArrayList<Double>();
+		for(int i = 0; i < lst.size(); i++){
+			copy.add(lst.get(i));
 		}
-		
-		previousMagnitude = m;
-		
-	 }
-	 
-	 
-	 
+		return copy;
+	}
 
-	 
+
+
+	public static double getThreshold(){
+		ArrayList<Double> sortedmagn = copy(magn);
+		Collections.sort(sortedmagn);
+		double threshold = 0;
+		for(int i = 0; i < sortedmagn.size()/2; i++){
+			threshold+=sortedmagn.get(i);		
+		}
+		threshold = threshold/sortedmagn.size()/2;
+
+		return threshold;
+	}
 
 	
-	 
-} 
+	public static void detectSteps(double x, double y, int i, double threshold){
+		double	m = Math.sqrt((Math.pow(x,2) + Math.pow(y,2)));
+	
+		currentMagnitude = m;
+		magn.add(currentMagnitude);
+		if(i!=magn.size()-1){
+			if((currentMagnitude < threshold)&&(previousMagnitude-currentMagnitude > 0) && (currentMagnitude-magn.get(i+1) < 0)){
+				steps++;
+			}
+		}
 
+		previousMagnitude = m;
+	 }
 
+}
